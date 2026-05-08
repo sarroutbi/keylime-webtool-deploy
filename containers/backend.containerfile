@@ -44,7 +44,7 @@ ENV LISTEN_ADDR=0.0.0.0:8080
 EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-    CMD curl -sf http://localhost:8080/api/health || exit 1
+    CMD curl -so /dev/null -w '' http://localhost:8080/ || exit 1
 
 USER app
 

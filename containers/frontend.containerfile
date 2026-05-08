@@ -44,6 +44,8 @@ ENV BACKEND_PORT=${BACKEND_PORT}
 EXPOSE 8443
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD wget -qO /dev/null --no-check-certificate https://localhost:8443/ || exit 1
+    CMD wget -qO /dev/null --no-check-certificate https://127.0.0.1:8443/ || exit 1
 
-USER nginx
+# No USER directive — the nginx master process needs root inside the container
+# to read TLS private keys, then forks workers as the nginx user. In rootless
+# Podman, container root is mapped to the host user, so this is safe.

@@ -9,17 +9,17 @@ PROJECT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 # --- Colors (if terminal supports them) ---
 if [ -t 1 ]; then
-    RED='\033[0;31m'
-    GREEN='\033[0;32m'
-    YELLOW='\033[0;33m'
-    NC='\033[0m'
+    RED=$(printf '\033[0;31m')
+    GREEN=$(printf '\033[0;32m')
+    YELLOW=$(printf '\033[0;33m')
+    NC=$(printf '\033[0m')
 else
     RED='' GREEN='' YELLOW='' NC=''
 fi
 
-info()  { printf "${GREEN}[INFO]${NC}  %s\n" "$*"; }
-warn()  { printf "${YELLOW}[WARN]${NC}  %s\n" "$*"; }
-error() { printf "${RED}[ERROR]${NC} %s\n" "$*" >&2; exit 1; }
+info()  { printf '%s[INFO]%s  %s\n' "${GREEN}" "${NC}" "$*"; }
+warn()  { printf '%s[WARN]%s  %s\n' "${YELLOW}" "${NC}" "$*"; }
+error() { printf '%s[ERROR]%s %s\n' "${RED}" "${NC}" "$*" >&2; exit 1; }
 
 # --- Prerequisite checks ---
 check_command() {
@@ -57,6 +57,7 @@ if [ ! -f "${CERT_DIR}/tls.crt" ] || [ ! -f "${CERT_DIR}/tls.key" ]; then
         -subj "/CN=keylime-dashboard/O=Development" \
         -addext "subjectAltName=DNS:localhost,IP:127.0.0.1" \
         2>/dev/null
+    chmod 644 "${CERT_DIR}/tls.key"
     info "Self-signed TLS certificate created at ${CERT_DIR}/"
 fi
 
@@ -70,6 +71,7 @@ for CERT_FILE in keylime-ca.crt keylime-client.crt keylime-client.key; do
             -out "${CERT_DIR}/keylime-client.crt" \
             -subj "/CN=keylime-client/O=Development" \
             2>/dev/null
+        chmod 644 "${CERT_DIR}/keylime-client.key"
         cp "${CERT_DIR}/keylime-client.crt" "${CERT_DIR}/keylime-ca.crt"
         break
     fi

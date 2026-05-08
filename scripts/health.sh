@@ -3,10 +3,10 @@
 set -eu
 
 if [ -t 1 ]; then
-    RED='\033[0;31m'
-    GREEN='\033[0;32m'
-    YELLOW='\033[0;33m'
-    NC='\033[0m'
+    RED=$(printf '\033[0;31m')
+    GREEN=$(printf '\033[0;32m')
+    YELLOW=$(printf '\033[0;33m')
+    NC=$(printf '\033[0m')
 else
     RED='' GREEN='' YELLOW='' NC=''
 fi
@@ -32,13 +32,14 @@ check_container() {
 
     case "${status}" in
         healthy)
-            printf "${GREEN}[OK]${NC}     %-20s %s\n" "${name}" "${status}"
+            printf '%s[OK]%s     %-20s %s\n' "${GREEN}" "${NC}" "${name}" "${status}"
             ;;
         starting)
-            printf "${YELLOW}[WAIT]${NC}   %-20s %s\n" "${name}" "${status}"
+            printf '%s[WAIT]%s   %-20s %s\n' "${YELLOW}" "${NC}" "${name}" "${status}"
+            EXIT_CODE=1
             ;;
         *)
-            printf "${RED}[FAIL]${NC}   %-20s %s\n" "${name}" "${status}"
+            printf '%s[FAIL]%s   %-20s %s\n' "${RED}" "${NC}" "${name}" "${status}"
             EXIT_CODE=1
             ;;
     esac

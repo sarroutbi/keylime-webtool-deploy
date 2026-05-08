@@ -31,13 +31,12 @@ services:
       BACKEND_HOST: ${BACKEND_HOST:-backend}
       BACKEND_PORT: ${BACKEND_PORT:-8080}
     depends_on:
-      backend:
-        condition: service_healthy
+      - backend
     networks:
       - internal
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-qO", "/dev/null", "--no-check-certificate", "https://localhost:8443/"]
+      test: ["CMD", "wget", "-qO", "/dev/null", "--no-check-certificate", "https://127.0.0.1:8443/"]
       interval: 30s
       timeout: 5s
       start_period: 10s
@@ -67,15 +66,13 @@ services:
       - ${KEYLIME_CLIENT_CERT:-./certs/keylime-client.crt}:/certs/keylime/client.crt:ro,Z
       - ${KEYLIME_CLIENT_KEY:-./certs/keylime-client.key}:/certs/keylime/client.key:ro,Z
     depends_on:
-      timescaledb:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      - timescaledb
+      - redis
     networks:
       - internal
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-sf", "http://localhost:8080/api/health"]
+      test: ["CMD", "curl", "-so", "/dev/null", "-w", "", "http://localhost:8080/"]
       interval: 30s
       timeout: 5s
       start_period: 15s

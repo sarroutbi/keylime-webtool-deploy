@@ -6,8 +6,11 @@ setup: ## One-command bootstrap: prereqs, certs, build, start
 build: ## Build or rebuild OCI images
 	@bash scripts/build.sh
 
-up: ## Start all services
+up: ## Start all services and check health
 	@podman-compose up -d
+	@sleep 5
+	@bash scripts/health.sh
+	@printf "\nDashboard: https://127.0.0.1:%s\n" "$${HOST_HTTPS_PORT:-8443}"
 
 down: ## Stop all services (keep volumes)
 	@podman-compose down
@@ -33,6 +36,7 @@ certs: ## Generate self-signed TLS certificates
 		-subj "/CN=keylime-dashboard/O=Development" \
 		-addext "subjectAltName=DNS:localhost,IP:127.0.0.1" \
 		2>/dev/null
+	@chmod 644 certs/tls.key
 	@printf "[INFO]  Self-signed TLS certificate generated in certs/\n"
 
 help: ## Show this help
