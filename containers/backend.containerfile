@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         pkg-config libssl-dev git ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-ARG BACKEND_REPO=https://github.com/keylime-webtool/keylime-webtool-backend.git
+ARG BACKEND_REPO=https://github.com/keylime-webtool/backend.git
 ARG BACKEND_REF=main
 
 WORKDIR /build
