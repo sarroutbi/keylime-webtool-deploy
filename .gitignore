@@ -1,0 +1,8 @@
+# Environment (contains secrets)
+.env
+
+# Generated TLS certificates
+certs/
+
+# Podman/container artifacts
+*.tar

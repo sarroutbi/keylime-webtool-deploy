@@ -1,0 +1,131 @@
+# Podman Compose configuration for the Keylime Monitoring Dashboard.
+# Compatible with podman-compose v1.x.
+#
+# Usage:
+#   podman-compose up -d
+#   podman-compose down
+#
+# All configurable values are read from .env (see .env.example).
+
+version: "3"
+
+services:
+  # -------------------------------------------------------------------------
+  # Frontend — nginx reverse proxy serving the React SPA
+  # -------------------------------------------------------------------------
+  frontend:
+    build:
+      context: .
+      dockerfile: containers/frontend.containerfile
+      args:
+        BACKEND_HOST: ${BACKEND_HOST:-backend}
+        BACKEND_PORT: ${BACKEND_PORT:-8080}
+    image: keylime-webtool-frontend:${FRONTEND_IMAGE_TAG:-latest}
+    container_name: keylime-frontend
+    ports:
+      - "${HOST_HTTPS_PORT:-8443}:8443"
+    volumes:
+      - ${TLS_CERT_PATH:-./certs/tls.crt}:/etc/nginx/certs/tls.crt:ro,Z
+      - ${TLS_KEY_PATH:-./certs/tls.key}:/etc/nginx/certs/tls.key:ro,Z
+    environment:
+      BACKEND_HOST: ${BACKEND_HOST:-backend}
+      BACKEND_PORT: ${BACKEND_PORT:-8080}
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - internal
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO", "/dev/null", "--no-check-certificate", "https://localhost:8443/"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+
+  # -------------------------------------------------------------------------
+  # Backend — Rust/Axum API server
+  # -------------------------------------------------------------------------
+  backend:
+    build:
+      context: .
+      dockerfile: containers/backend.containerfile
+    image: keylime-webtool-backend:${BACKEND_IMAGE_TAG:-latest}
+    container_name: keylime-backend
+    environment:
+      RUST_LOG: ${RUST_LOG:-info}
+      LISTEN_ADDR: ${LISTEN_ADDR:-0.0.0.0:8080}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://keylime:changeme@timescaledb:5432/keylime_dashboard}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      KEYLIME_VERIFIER_URL: ${KEYLIME_VERIFIER_URL:-https://localhost:8881}
+      KEYLIME_REGISTRAR_URL: ${KEYLIME_REGISTRAR_URL:-https://localhost:8891}
+      KEYLIME_CA_CERT: /certs/keylime/ca.crt
+      KEYLIME_CLIENT_CERT: /certs/keylime/client.crt
+      KEYLIME_CLIENT_KEY: /certs/keylime/client.key
+    volumes:
+      - ${KEYLIME_CA_CERT:-./certs/keylime-ca.crt}:/certs/keylime/ca.crt:ro,Z
+      - ${KEYLIME_CLIENT_CERT:-./certs/keylime-client.crt}:/certs/keylime/client.crt:ro,Z
+      - ${KEYLIME_CLIENT_KEY:-./certs/keylime-client.key}:/certs/keylime/client.key:ro,Z
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - internal
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+
+  # -------------------------------------------------------------------------
+  # TimescaleDB — attestation event storage
+  # -------------------------------------------------------------------------
+  timescaledb:
+    image: docker.io/timescale/timescaledb:latest-pg16
+    container_name: keylime-timescaledb
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-keylime_dashboard}
+      POSTGRES_USER: ${POSTGRES_USER:-keylime}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    volumes:
+      - timescaledb-data:/var/lib/postgresql/data:Z
+      - ./config/timescaledb/init.sql:/docker-entrypoint-initdb.d/init.sql:ro,Z
+    networks:
+      - internal
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-keylime} -d ${POSTGRES_DB:-keylime_dashboard}"]
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 5
+
+  # -------------------------------------------------------------------------
+  # Redis — response cache
+  # -------------------------------------------------------------------------
+  redis:
+    image: docker.io/library/redis:7-alpine
+    container_name: keylime-redis
+    volumes:
+      - redis-data:/data:Z
+    networks:
+      - internal
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      start_period: 5s
+      retries: 3
+
+volumes:
+  timescaledb-data:
+  redis-data:
+
+networks:
+  internal:
+    driver: bridge
