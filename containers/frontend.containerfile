@@ -4,7 +4,7 @@
 # ---------------------------------------------------------------------------
 # Stage 1: Build the React application
 # ---------------------------------------------------------------------------
-FROM docker.io/library/node:20-alpine AS builder
+FROM docker.io/library/node:24-alpine AS builder
 
 ARG FRONTEND_REPO=https://github.com/keylime-webtool/frontend.git
 ARG FRONTEND_REF=main

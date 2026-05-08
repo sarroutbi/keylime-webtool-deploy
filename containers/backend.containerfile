@@ -1,14 +1,14 @@
-# Multi-stage build: Rust toolchain for compilation, minimal runtime image.
-# The final image contains only the statically-linked binary — no compiler.
+# Multi-stage build: Rust toolchain for compilation, minimal Fedora runtime image.
+# The final image contains only the compiled binary — no compiler.
 
 # ---------------------------------------------------------------------------
 # Stage 1: Build the Rust backend
 # ---------------------------------------------------------------------------
-FROM docker.io/library/rust:1-slim-bookworm AS builder
+FROM registry.fedoraproject.org/fedora:43 AS builder
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        pkg-config libssl-dev git ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+RUN dnf install -y --setopt=install_weak_deps=False \
+        rust cargo pkg-config openssl-devel git ca-certificates \
+    && dnf clean all
 
 ARG BACKEND_REPO=https://github.com/keylime-webtool/backend.git
 ARG BACKEND_REF=main
@@ -28,11 +28,11 @@ RUN cargo build --release && \
 # ---------------------------------------------------------------------------
 # Stage 2: Minimal runtime
 # ---------------------------------------------------------------------------
-FROM docker.io/library/debian:bookworm-slim
+FROM registry.fedoraproject.org/fedora-minimal:43
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        ca-certificates libssl3 curl \
-    && rm -rf /var/lib/apt/lists/*
+RUN microdnf install -y --setopt=install_weak_deps=0 \
+        ca-certificates openssl-libs curl shadow-utils \
+    && microdnf clean all
 
 RUN groupadd --system app && useradd --system --gid app --create-home app
 
